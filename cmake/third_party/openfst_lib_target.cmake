@@ -9,6 +9,8 @@ include_directories(${fst_include_dir})
 file(GLOB fst_sources "${fst_source_dir}/*.cc")
 
 add_library(fst ${fst_sources})
+harden(fst)
+
 target_include_directories(fst PUBLIC
      $<BUILD_INTERFACE:${fst_include_dir}>
      $<INSTALL_INTERFACE:include/openfst>
@@ -16,13 +18,16 @@ target_include_directories(fst PUBLIC
 
 install(TARGETS fst
     EXPORT kaldi-targets
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_FULL_LIBDIR}
+    COMPONENT "libfst_dev"
+    LIBRARY DESTINATION ${CMAKE_INSTALL_FULL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_FULL_BINDIR}
+    COMPONENT "libfst"
 )
 
-install(DIRECTORY ${fst_include_dir}/fst
-    DESTINATION include/openfst
+install(DIRECTORY "${fst_include_dir}/fst"
+    DESTINATION "${CMAKE_INSTALL_FULL_INCLUDEDIR}/openfst"
+    COMPONENT "libfst_dev"
     PATTERN "test/*.h" EXCLUDE
 )
 

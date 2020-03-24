@@ -3,8 +3,19 @@ project(kaldi)
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake;${CMAKE_MODULE_PATH}")
 include(GNUInstallDirs)
+include(CPackComponent)
 include(Utils)
+include(Hardening)
 include(third_party/get_third_party)
+
+macro(pass_through_cpack_vars)
+	get_cmake_property(cpackVarsToPassthrough VARIABLES)
+	foreach(varName ${cpackVarsToPassthrough})
+		if(varName MATCHES "^CPACK_")
+			set("${varName}" "${${varName}}" PARENT_SCOPE)
+		endif()
+	endforeach()
+endmacro()
 
 # Should update cmake to a more recent version which supports FindPython3.
 find_package(PythonInterp)
@@ -19,6 +30,19 @@ execute_process(COMMAND ${PYTHON_EXECUTABLE}
     "${CMAKE_CURRENT_SOURCE_DIR}/cmake/gen_cmake_skeleton.py"
     "${CMAKE_CURRENT_SOURCE_DIR}/src"
     "--quiet"
+)
+
+cpack_add_component_group("tools"
+	DISPLAY_NAME "Kaldi tools"
+	DESCRIPTION "Differrent tools, some of them may be unneeded for end users."
+)
+cpack_add_component_group("libs"
+	DISPLAY_NAME "libraries"
+	DESCRIPTION "Different libs. Likely all needed."
+)
+cpack_add_component_group("tests"
+	DISPLAY_NAME "libraries"
+	DESCRIPTION "Different tests. Likely unneeded."
 )
 
 set(CMAKE_CXX_STANDARD 14)
@@ -240,5 +264,27 @@ write_basic_package_version_file(
 )
 install(FILES ${CMAKE_BINARY_DIR}/cmake/kaldi-config.cmake ${CMAKE_BINARY_DIR}/cmake/kaldi-config-version.cmake
     DESTINATION lib/cmake/kaldi
+    COMPONENT "dev"
 )
-install(EXPORT kaldi-targets DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/cmake/kaldi)
+install(EXPORT kaldi-targets DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/cmake/kaldi COMPONENT "dev")
+
+
+set(CPACK_PACKAGE_CHECKSUM "SHA512")
+set(CPACK_GENERATOR "DEB")
+#set(CPACK_DEBIAN_COMPRESSION_TYPE "xz")
+set(CPACK_DEBIAN_COMPRESSION_TYPE "gzip")
+option(CPACK_RPM_COMPONENT_INSTALL "Split into multiple rpm packages" ON)
+option(CPACK_DEB_COMPONENT_INSTALL "Split into multiple deb packages" ON)
+set(CPACK_PACKAGE_VENDOR "Kaldi developers")
+set(CPACK_PACKAGE_CONTACT "https://github.com/kaldi-asr/kaldi")
+set(CPACK_PACKAGE_HOMEPAGE_URL "https://github.com/kaldi-asr/kaldi")
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/COPYING")
+set(CPACK_RESOURCE_FILE_README "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
+set(CPACK_PACKAGE_DESCRIPTION_FILE "${CPACK_RESOURCE_FILE_README}")
+
+set(CPACK_DEBIAN_PACKAGE_NAME "kaldi")
+#set(CPACK_COMPONENTS_GROUPING "IGNORE")
+
+set(CPACK_MONOLITHIC_INSTALL OFF)
+
+include(CPack)

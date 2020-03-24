@@ -167,13 +167,14 @@ class CMakeListsHeaderLibrary(object):
         ret.append("add_library(" + self.target_name + " INTERFACE)")
         ret.append("target_include_directories(" + self.target_name + " INTERFACE ")
         ret.append("    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>")
-        ret.append("    $<INSTALL_INTERFACE:include/kaldi>")
+        ret.append("    $<INSTALL_INTERFACE:${CMAKE_INSTALL_FULL_INCLUDEDIR}/kaldi>")
         ret.append(")\n")
 
         ret.append("""
-install(TARGETS {tgt} EXPORT kaldi-targets)
+harden("{tgt}")
+install(TARGETS {tgt} EXPORT kaldi-targets COMPONENT "lib")
 
-install(FILES ${{PUBLIC_HEADERS}} DESTINATION include/kaldi/{dir})
+install(FILES ${{PUBLIC_HEADERS}} DESTINATION ${CMAKE_INSTALL_FULL_INCLUDEDIR}/kaldi/{dir} COMPONENT "dev")
 """.format(tgt=self.target_name, dir=self.dir_name))
 
         return "\n".join(ret)
@@ -237,7 +238,7 @@ class CMakeListsLibrary(object):
         ret.append(")\n")
         ret.append("target_include_directories(" + self.target_name + " PUBLIC ")
         ret.append("     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>")
-        ret.append("     $<INSTALL_INTERFACE:include/kaldi>")
+        ret.append("     $<INSTALL_INTERFACE:${CMAKE_INSTALL_FULL_INCLUDEDIR}/kaldi>")
         ret.append(")\n")
 
         if len(self.depends) > 0:
@@ -263,14 +264,18 @@ class CMakeListsLibrary(object):
             ret.append("endif()")
 
         ret.append("""
+harden("{tgt}")
 install(TARGETS {tgt}
     EXPORT kaldi-targets
-    ARCHIVE DESTINATION ${{CMAKE_INSTALL_LIBDIR}}
-    LIBRARY DESTINATION ${{CMAKE_INSTALL_LIBDIR}}
-    RUNTIME DESTINATION ${{CMAKE_INSTALL_BINDIR}}
+    LIBRARY DESTINATION ${{CMAKE_INSTALL_FULL_LIBDIR}}
+    RUNTIME DESTINATION ${{CMAKE_INSTALL_FULL_BINDIR}}
+    COMPONENT "lib"
+    ARCHIVE DESTINATION ${{CMAKE_INSTALL_FULL_LIBDIR}}
+    COMPONENT "dev"
 )
 
-install(FILES ${{PUBLIC_HEADERS}} DESTINATION include/kaldi/{dir})
+install(FILES ${{PUBLIC_HEADERS}} DESTINATION ${CMAKE_INSTALL_FULL_INCLUDEDIR}/kaldi/{dir} COMPONENT "dev")
+pass_through_cpack_vars()
 """.format(tgt=self.target_name, dir=self.dir_name))
 
         return "\n".join(ret)
@@ -294,6 +299,7 @@ class CMakeListsExecutable(object):
             ret.extend(wrap_notwin32_condition(disable_for_win32(exe_name),
                        "add_kaldi_executable(NAME " + exe_name + " SOURCES " + file_name + " DEPENDS " + depends + ")"))
 
+        ret.append("pass_through_cpack_vars()")
         return "\n".join(ret)
 
 class CMakeListsFile(object):
